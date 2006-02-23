@@ -1,22 +1,47 @@
-Here is v0.01 of HTTP:Browscap.
+HTTP::Browscap
+==============
 
-It provides information
-on a web browsers' capabilities (eg - table support, frame
-support), the browser being identified by its "User Agent" string.
-This will use the existing Microsoft Browscap.ini database, a 
-version of which is freely downloadable and actively maintained at 
-http://www.browserhawk.com/browscap/
+Browscap.ini is a file, introduced with Microsoft's IIS, that lists the
+User-Agent strings that different browsers send, and various capabilities
+of those browsers.  This module parses browscap.ini and allows you to find
+the capability definitions for a given browser.
 
-As the version number suggests this is a very early version and
-consequently has no Makefile.PL etc. I will be polishing up this module
-in the next few months and the interface may be subject to change.
+INSTALLATION
 
-Please check the module's homepage at
-http://www.jamespo.ukshells.co.uk/perl/
-or contact me at perl@jamespo.ukshells.co.uk
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   sudo make install
+
+You will also have to get a browscap.ini file.  Gary Keith maintains the
+most up to date one.
+
+First, read http://www.garykeith.com/browsers/terms.asp.
+
+Then run the following:
+
+    wget -O browscap.ini \
+        "http://www.garykeith.com/browsers/stream.asp?BrowsCapINI"
+    sudo browscap-update browscap.ini
+    rm browscap.ini
+
+You will need to be the same user you ran make install as.
 
 
-Thanks,
 
+DEPENDENCIES
 
-James Powell
+This module requires these other modules and libraries:
+
+  Test::More
+  MLDBM
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2005-2006 Philip Gwyn
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+

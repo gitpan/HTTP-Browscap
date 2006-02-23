@@ -1,0 +1,9 @@
+Browscap.pm
+Changes
+Makefile.PL
+MANIFEST
+README
+t/10_OO.t
+t/20_func.t
+t/browscap.ini
+browscap-update

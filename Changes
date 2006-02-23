@@ -1,0 +1,9 @@
+Revision history for Perl extension HTTP::Browscap.
+
+0.02 2006/02/22
+    - First public release.
+
+0.01  Fri Oct 28 20:21:12 2005
+	- original version; created by h2xs 1.22 with options
+		-b5.004.05 -AXc --use-new-tests --skip-exporter --skip-autoloader HTTP::Browscap
+

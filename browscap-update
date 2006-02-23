@@ -1,0 +1,71 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use File::Basename;
+use File::Spec;
+use File::Copy;
+use HTTP::Browscap;
+
+my $file = shift;
+
+unless( $file ) {
+    die "Usage: $0 browscap.ini\n";
+}
+
+unless( -f $file ) {
+    die "$0: $file doesn't exist: $!\n";
+}
+
+unless( -r $file ) {
+    die "$0: $file isn't readable: $!\n";
+}
+
+my $BC = HTTP::Browscap->new;
+
+
+## Open and parse the file
+$BC->__set_file( $file );
+$BC->__parse;
+$BC->__save_cache
+    or die "Failed";
+
+my $cache_file = $BC->{cache};
+
+# OK, everything is peachy in the file
+
+## Now file out where we want to put everything
+my $dest_pm = $INC{'HTTP/Browscap.pm'};
+
+my $dest_dir = File::Spec->rel2abs( dirname $dest_pm );
+
+my $file_dest = File::Spec->catfile( $dest_dir, 'browscap.ini' );
+
+$BC->__set_file( $file_dest );
+my $cache_dest = $BC->{cache};
+
+undef( $BC );
+
+if( -f $cache_dest and not -w $cache_dest ) {
+    chmod 0644, $cache_dest or warn "$!";
+}
+
+copy( $file, $file_dest)         or die "Unable to create $file_dest: $!\n";
+chmod 0644, $file_dest;
+my @stat = stat $file;
+utime(@stat[8,9], $file_dest)    or warn "utime failed: $!";
+
+copy( $cache_file, $cache_dest)  or die "Unable to create $cache_dest: $!\n";
+chmod 0644, $cache_dest;
+@stat = stat $cache_file;
+utime(@stat[8,9], $cache_dest)   or warn "utime failed: $!";
+
+## And now update the PM so we can find it later
+{
+    local @ARGV = ( $dest_pm );
+    local $^I = '.bk';
+    while( <> ) {
+        s/^(\$BROWSCAP_INI = qq\().*(\);\s*)$/$1$file_dest$2/;
+        print;
+    }
+}
