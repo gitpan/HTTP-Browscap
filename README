@@ -18,12 +18,13 @@ To install this module type the following:
 You will also have to get a browscap.ini file.  Gary Keith maintains the
 most up to date one.
 
-First, read http://www.garykeith.com/browsers/terms.asp.
+First, read 
+    http://browsers.garykeith.com/terms.asp
 
 Then run the following:
 
     wget -O browscap.ini \
-        "http://www.garykeith.com/browsers/stream.asp?BrowsCapINI"
+        "http://browsers.garykeith.com/stream.asp?BrowsCapINI"
     sudo browscap-update browscap.ini
     rm browscap.ini
 
@@ -40,7 +41,7 @@ This module requires these other modules and libraries:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2005-2006 Philip Gwyn
+Copyright (C) 2005-2007 Philip Gwyn
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

@@ -15,7 +15,7 @@ require Exporter;
 @ISA = qw( Exporter );
 @EXPORT = qw(browscap);
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 $BROWSCAP_INI = qq();
 
 ##########################################################
@@ -150,7 +150,7 @@ sub __parse
 
         while( ($key, $value) = each %$parent ) {
             if( $key eq 'parent' ) {
-                warn "Grand-Parent of $def->{UA} / $def->{parent} / $value at line $def->{LINE} of $self->{file}\n";
+                # warn "Grand-Parent of $def->{UA} / $def->{parent} / $value at line $def->{LINE} of $self->{file}\n";
             }
             next if exists $def->{$key};
             $def->{$key} = $value;
@@ -319,21 +319,24 @@ the capability definitions for a given browser.
 =head1 DESCRIPTION
 
 Starting with Microsoft's IIS, a browscap.ini file was used to list the
-capabilities of various browsers.  Using the User-Agent string that a
-browser sends in the HTTP request, the capabilities of a browser are
+capabilities of various browsers.  Using the User-Agent header sent by a
+browser during each HTTP request, the capabilities of a browser are
 retrieved.  If an exact match of the User-Agent string isn't found,
 wild-card expantion is done.  If all fails, a default browser definition is
 used.
 
-There are limits the usefulness of browscap.ini.  It only detects if a
-browser has a certain capability, but not if this capability has been
-deactivated or if it's a buggy implementation.  In particular, most CSS and
-JavaScript implementations will make you scream.
+The information in Browscap allows you to adapt your response to the
+browser's capabalities.  There are however limits it's usefulness.  It only
+detects if a browser has a certain capability, but not if this capability
+has been deactivated nor if it's a badly implemented.  In particular, most
+CSS and JavaScript implementations will make you scream.  You might to use
+L<HTTP::BrowserDetect> or L<HTTP::BrowserSupport> to detect a specific
+feature or bug.
 
 
 =head2 Capabilities
 
-The browser capability definition returned by C<browscap()> or C<match()> is
+The browser capability definition returned by L</browscap> or L</match> is
 a hash reference.  The keys are defined below.  Boolean capabilites can have
 values '' (false) or 1 (true).
 
@@ -425,9 +428,29 @@ engine?  Boolean.
 CSS version supported by this browser.  Possible values : 0 (no CSS
 support), 1 or 2.
 
+=item cssversion
+
+Same as above?
+
+=item supportcss
+
+Does this user-agent support CSS?  Boolean.
+
 =item iframes
 
 Does the browser support MS's <IFRAME> tags?  Boolean.
+
+=item isbanned
+
+Is the user-agent string banned by Craig Keith?  Boolean.
+
+=item ismobiledevice
+
+Is this a browser on a mobile device (iPhone, Blackberry, etc)?  Boolean.
+
+=item issyndicationreader
+
+Is this user-agent an RSS or ATOM reader?  Boolean.
 
 =item netclr
 
@@ -446,14 +469,28 @@ Minor version number.  Example: given a version of 1.10, minorver is 10.
 Identifies the browser as a crawler that does not obey robots.txt. This
 includes e-mail harvesters, download managers and so on.  Boolean.
 
+=item tables
+
+Does the browser support HTML <TABLE> tags?  Boolean.
+
 =item wap
 
 Is browser a WAP-enabled mobile phone?  Boolean.
 
 =item win16
 
-Is this the 16-bit windows version of the browser?  Detecting this
-might be useful if you want the user to save a file.  Boolean.
+Is this the 16-bit windows version of the browser?  Detecting this might be
+useful if you want the user to save a file with 8.3 length.  Boolean.
+
+=item win32
+
+Is this the 32-bit windows version of the browser?  
+Boolean.
+
+=item win64
+
+Is this the 32-bit windows version of the browser?  
+Boolean.
 
 =back
 
@@ -479,7 +516,7 @@ lookup.
 
 Note that, contrary to other implementations, all capability names are in
 lower case, except for C<UA> and C<LINE>.  This means you should look for
-win16 instead of Win16.
+C<'win16'> instead of C<'Win16'>.
 
 =head2 Cached data
 
@@ -487,8 +524,8 @@ Because parsing browscap.ini is slow, a cached version of the parsed data is
 automatically created and used where possible.  Normaly this cached version
 is created when you ran C<browscap-update> during installation.
 
-The cache file is a MLDBM file created with C<DB_File> and C<Storable>.  You
-may change this by overloading C<__save_cache> and C<__open_cache>.
+The cache file is a MLDBM file created with L<DB_File> and L<Storable>.  You
+may change this by overloading L</__save_cache> and L</__open_cache>.
 
 
 
@@ -498,11 +535,11 @@ You will want to periodically fetch a new browscap.ini.  This can be done
 with the following :
 
     wget -O browscap.ini \
-        "http://www.garykeith.com/browsers/stream.asp?BrowsCapINI"
+        "http://browsers.garykeith.com/stream.asp?BrowsCapINI"
     browscap-update browscap.ini
     rm browscap.ini
 
-However, you must read L<http://www.garykeith.com/browsers/terms.asp> before
+However, you must read L<http://browsers.garykeith.com/terms.asp> before
 automating this.
 
 
@@ -518,7 +555,7 @@ Find the capabilities of a browser identified by a given User-Agent string.
 If the string is missing, C<browscap> will attempt to find one.  See
 C<__guess_ua> below.
 
-Returns a hashref.  See C<Capabilities> above.
+Returns a hashref.  See L</Capabilities> above.
 
 =head1 METHODS
 
@@ -538,10 +575,10 @@ system's browscap.ini will be used.
     $def = $BC->match( $ua );
 
 Find the capabilities of a browser identified by the User-Agent string given
-in C<$ua>. If the string is missing, C<browscap> will attempt to find one. 
-See C<__guess_ua> below.
+in C<$ua>. If the string is missing, C<match> will attempt to find one. 
+See L</__guess_ua> below.
 
-Returns a hashref.  See C<Capabilities> above.
+Returns a hashref.  See L</Capabilities> above.
 
 =head2 open
 
@@ -562,9 +599,10 @@ The following methods are documented in case you wish to create a sub-class.
 
     $BC->__guess_ua;
 
-Used to guess at a User-Agent string.  First C<__guess_ua> looks in
+Used to guess at a User-Agent string.  First L</__guess_ua> looks in
 C<$ENV{HTTP_USER_AGENT}> (CGI environement variable).  If this fails and
-C<$ENV{MOD_PERL}> is set, C<browscap> will use the mod_perl's C<headers_in()>
+C<$ENV{MOD_PERL}> is set, C<__guess_ua> will use the mod_perl's 
+L<Apache/headers_in()>
 to find it.  If both these fails, the default User-Agent is returned, which
 is probably not what you want.
 
@@ -607,7 +645,7 @@ in browscap.ini may contain C<*> or C<.>, which act like file-globs.
 
 =head1 SEE ALSO
 
-L<http://www.garykeith.com/browsers>,
+L<http://browsers.garykeith.com/>,
 L<http://www.microsoft.com/windows2000/en/server/iis/default.asp?url=/windows2000/en/server/iis/htm/asp/comp1g11.htm>
 L<HTTP::BrowserDetect>.
 

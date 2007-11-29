@@ -3,7 +3,6 @@
 use strict;
 
 use Test::More tests => 6;
-use Data::Denter;
 
 use HTTP::Browscap;
 pass( 'Module loaded' );
@@ -13,13 +12,13 @@ $HTTP::Browscap::BROWSCAP_INI = "t/browscap.ini";
 my $def = browscap( "Googlebot-Image/1.0" );
 ok( ($def and $def->{browser} eq 'Googlebot-Image' and $def->{frames}
             and not $def->{javascript} and not $def->{aol}),
-                "Found with explicit name" ) or warn "Why not? ", Denter $def;
+                "Found with explicit name" );
 
 $ENV{HTTP_USER_AGENT} = "Googlebot-Image/1.0";
 $def = browscap( );
 ok( ($def and $def->{browser} eq 'Googlebot-Image' and $def->{frames}
             and not $def->{javascript} and not $def->{aol}),
-                "Found via CGI ENV" ) or warn "Why not? ", Denter $def;
+                "Found via CGI ENV" );
 
 
 delete $ENV{HTTP_USER_AGENT};
@@ -28,24 +27,21 @@ $ENV{MOD_PERL} = "mod_perl/1.1";
 $def = browscap( );
 ok( ($def and $def->{browser} eq 'Firefox' and $def->{cookies}
         and $def->{css}==2 and $def->{javascript} and 
-                $def->{version} eq '1.0'), "Found with mod_perl/1 interface")
-            or warn "Why not? ", Denter $def;
+                $def->{version} eq '1.0'), "Found with mod_perl/1 interface");
 
 
 $ENV{MOD_PERL} = "mod_perl/2.3";
 $def = browscap( );
 ok( ($def and $def->{browser} eq 'Firefox' and $def->{cookies}
         and $def->{css}==2 and $def->{javascript} and 
-                $def->{version} eq '1.0'), "Found with mod_perl/2 interface")
-            or warn "Why not? ", Denter $def;
+                $def->{version} eq '1.0'), "Found with mod_perl/2 interface");
 
 delete $ENV{MOD_PERL};
 
 $def = browscap();
 
 ok( ($def and $def->{browser} eq 'Default Browser' and not $def->{css}
-        and not $def->{javascript} and $def->{tables}), "Found default browser")
-            or warn "Why not? ", Denter $def;
+        and not $def->{javascript} and $def->{tables}), "Found default browser");
 
 
 unlink "browscap.ini.cache";

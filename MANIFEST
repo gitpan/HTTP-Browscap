@@ -7,3 +7,4 @@ t/10_OO.t
 t/20_func.t
 t/browscap.ini
 browscap-update
+META.yml                                 Module meta-data (added by MakeMaker)
