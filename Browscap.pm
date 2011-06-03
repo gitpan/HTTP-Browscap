@@ -15,7 +15,7 @@ require Exporter;
 @ISA = qw( Exporter );
 @EXPORT = qw(browscap);
 
-$VERSION = '0.03';
+$VERSION = '0.04';
 $BROWSCAP_INI = qq();
 
 ##########################################################
@@ -166,7 +166,7 @@ sub __parse_wild
     my( $self, $ua ) = @_;
 
     my $wild = quotemeta $ua;
-    my $uses = ( $wild =~ s/\\\*/.*?/g );
+    my $uses = ( $wild =~ s/(\\\*)+/.*?/g );
     $uses += ( $wild =~ s/\\\?/./g );
 
     return unless $uses;
@@ -272,7 +272,7 @@ sub match
         my $m_details = $self->{data}{$re};     # yes, get some details
         my $rel = length( $match) - $m_details->{size}; # relevance of match
 
-        next if $rel > ($possible->{rel}||100000); # More relevant?
+        next if $possible and $rel > $possible->{rel};  # More relevant?
         $possible = $m_details;                 # Yes!  save this one
         $possible->{rel} = $rel;
     }
@@ -328,8 +328,8 @@ used.
 The information in Browscap allows you to adapt your response to the
 browser's capabalities.  There are however limits it's usefulness.  It only
 detects if a browser has a certain capability, but not if this capability
-has been deactivated nor if it's a badly implemented.  In particular, most
-CSS and JavaScript implementations will make you scream.  You might to use
+has been deactivated nor if it's badly implemented.  In particular, most CSS
+and JavaScript implementations will make you scream.  You might want to use
 L<HTTP::BrowserDetect> or L<HTTP::BrowserSupport> to detect a specific
 feature or bug.
 
@@ -655,7 +655,7 @@ Philip Gwyn, E<lt>gwyn-AT-cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2005-2006 by Philip Gwyn
+Copyright 2005-2011 by Philip Gwyn
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

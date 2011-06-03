@@ -1,5 +1,15 @@
 Revision history for Perl extension HTTP::Browscap.
 
+0.04 2011/06/03
+    - Fixed relevance calculcation.  Should be able to detect MSIE 9 now
+        Thank you Lam L Y
+    - Latest browscap.ini has ** in it.  Work around this.
+
+0.03 2007/11/28
+    - Don't use Data::Denter
+    - Remove cookie crumbs
+    - Tweak doco
+
 0.02 2006/02/22
     - First public release.
 

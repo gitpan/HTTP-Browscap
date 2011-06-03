@@ -1,17 +1,25 @@
 --- #YAML:1.0
-name:                HTTP-Browscap
-version:             0.03
-abstract:            Parse and search browscap.ini files
-license:             ~
-generated_by:        ExtUtils::MakeMaker version 6.36
-distribution_type:   module
-requires:     
-    DB_File:                       0
-    MLDBM:                         2
-    Storable:                      0
-    Test::More:                    0
-meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
-    version: 1.2
+name:               HTTP-Browscap
+version:            0.04
+abstract:           Parse and search browscap.ini files
 author:
     - Philip Gwyn <fil@localdomain>
+license:            perl
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    DB_File:     0
+    MLDBM:       2
+    Storable:    0
+    Test::More:  0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.56
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

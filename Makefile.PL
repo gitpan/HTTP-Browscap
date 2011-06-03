@@ -5,6 +5,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     'NAME'		=> 'HTTP::Browscap',
     'VERSION_FROM'	=> 'Browscap.pm', # finds $VERSION
+    'LICENSE'       => 'perl',
     
     'PREREQ_PM'		=> {
         'Test::More'  =>  0,

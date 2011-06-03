@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 use HTTP::Browscap;
 pass( 'Module loaded' );
@@ -43,6 +43,15 @@ $def = browscap();
 ok( ($def and $def->{browser} eq 'Default Browser' and not $def->{css}
         and not $def->{javascript} and $def->{tables}), "Found default browser");
 
+
+##############################
+$ENV{HTTP_USER_AGENT}='Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)';
+$def = browscap( );
+ok( ($def and $def->{browser} eq 'IE'), "MSIE 9.0 found" );
+
+$ENV{HTTP_USER_AGENT}='Mozilla/5.0 (Windows NT 6.1; rv:5.0) Gecko/20100101 Firefox/5.0';
+$def = browscap( );
+ok( ($def and $def->{browser} eq 'Firefox'), "Firefox 5 found" );
 
 unlink "browscap.ini.cache";
 
