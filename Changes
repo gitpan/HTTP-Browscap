@@ -1,5 +1,10 @@
 Revision history for Perl extension HTTP::Browscap.
 
+0.05 2011/08/26
+    - Fix doco to closer follow Gary's usage
+    - Derive css from CssVersion
+    - Derive aol from AolVersion
+
 0.04 2011/06/03
     - Fixed relevance calculcation.  Should be able to detect MSIE 9 now
         Thank you Lam L Y

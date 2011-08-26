@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use HTTP::Browscap;
 pass( 'Module loaded' );
@@ -49,7 +49,15 @@ $ENV{HTTP_USER_AGENT}='Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Triden
 $def = browscap( );
 ok( ($def and $def->{browser} eq 'IE'), "MSIE 9.0 found" );
 
+$ENV{HTTP_USER_AGENT}='Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)';
+$def = browscap( );
+ok( ($def and $def->{browser} eq 'IE'), "MSIE 9.0 found" );
+# use Data::Dumper;
+# warn Dumper $def;
+
+
 $ENV{HTTP_USER_AGENT}='Mozilla/5.0 (Windows NT 6.1; rv:5.0) Gecko/20100101 Firefox/5.0';
+
 $def = browscap( );
 ok( ($def and $def->{browser} eq 'Firefox'), "Firefox 5 found" );
 

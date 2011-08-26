@@ -15,7 +15,7 @@ require Exporter;
 @ISA = qw( Exporter );
 @EXPORT = qw(browscap);
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 $BROWSCAP_INI = qq();
 
 ##########################################################
@@ -100,7 +100,8 @@ sub __parse
                      LINE=>$. 
                    };
 
-            $self->{data}{ $ua } = $def;
+            
+            $self->{data}{ $ua } = $self->__fix_def( $def );
                                         # Does UA have wildcards in it?
             ($wild, $w_details)  = $self->__parse_wild( $ua );
             if( $wild ) {               # yes, then save those
@@ -178,6 +179,22 @@ sub __parse_wild
         # know the number of chars in $ua that aren't a wildcard
         size => length( $ua ) - $uses
     };
+}
+
+##########################################################
+# Gary is perpetually changing is schema.
+#  Css => CssVersion
+#  SupportCss disapeared
+#  Aol => AolVersion
+sub __fix_def
+{
+    my( $self, $def ) = @_;
+    $def->{css} = $def->{cssversion} if exists $def->{cssversion} and not defined $def->{css};
+    $def->{supportcss} = 0!=$def->{cssversion} 
+                    if exists $def->{cssversion} and not defined $def->{supportcss};
+    $def->{aol} = 0!=$def->{aolversion} 
+                    if exists $def->{aolversion} and not defined $def->{aol};
+    return $def;
 }
 
 ##########################################################
@@ -414,23 +431,31 @@ Gary Keith adds the following:
 
 =over 8
 
+=item alpha
+
+Browser is an alpha version and still under development?  Boolean.
+
 =item aol
 
 Is this an AOL-branded browser?  Boolean.
+
+=item aolversion
+
+A number indicating what version, if any, of the America Online browser is being used.
 
 =item crawler
 
 Is this browser in fact a web-crawler or spider, often sent by a search
 engine?  Boolean.
 
-=item css
+=item cssversion
 
 CSS version supported by this browser.  Possible values : 0 (no CSS
 support), 1 or 2.
 
 =item cssversion
 
-Same as above?
+Same as above.
 
 =item supportcss
 
@@ -442,7 +467,7 @@ Does the browser support MS's <IFRAME> tags?  Boolean.
 
 =item isbanned
 
-Is the user-agent string banned by Craig Keith?  Boolean.
+Is the user-agent string banned by Gary Keith?  Boolean.
 
 =item ismobiledevice
 
@@ -454,7 +479,7 @@ Is this user-agent an RSS or ATOM reader?  Boolean.
 
 =item netclr
 
-Is this a .NET CLR user-agent?  Boolean.
+Is this a .NET CLR user-agent?  Boolean.  (Seems to longer exist.)
 
 =item majorver
 

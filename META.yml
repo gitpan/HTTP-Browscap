@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               HTTP-Browscap
-version:            0.04
+version:            0.05
 abstract:           Parse and search browscap.ini files
 author:
     - Philip Gwyn <fil@localdomain>
