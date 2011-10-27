@@ -18,7 +18,7 @@ WriteMakefile(
 
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM => 'Browscap.pm', # retrieve abstract from module
-       AUTHOR     => 'Philip Gwyn <fil@localdomain>') : ()),
+       AUTHOR     => 'Philip Gwyn <gwyn -at- cpan.org>') : ()),
 );
 
 

@@ -1,5 +1,8 @@
 Revision history for Perl extension HTTP::Browscap.
 
+0.06 2011/10/26
+    - Created the fallback mechanism to future-proof stale browscap.ini files.
+
 0.05 2011/08/26
     - Fix doco to closer follow Gary's usage
     - Derive css from CssVersion

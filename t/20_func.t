@@ -2,12 +2,13 @@
 
 use strict;
 
-use Test::More tests => 9;
+use Test::More tests => 14;
 
 use HTTP::Browscap;
 pass( 'Module loaded' );
 
 $HTTP::Browscap::BROWSCAP_INI = "t/browscap.ini";
+unlink "$HTTP::Browscap::BROWSCAP_INI.cache";
 
 my $def = browscap( "Googlebot-Image/1.0" );
 ok( ($def and $def->{browser} eq 'Googlebot-Image' and $def->{frames}
@@ -57,9 +58,23 @@ ok( ($def and $def->{browser} eq 'IE'), "MSIE 9.0 found" );
 
 
 $ENV{HTTP_USER_AGENT}='Mozilla/5.0 (Windows NT 6.1; rv:5.0) Gecko/20100101 Firefox/5.0';
-
 $def = browscap( );
 ok( ($def and $def->{browser} eq 'Firefox'), "Firefox 5 found" );
+
+$ENV{HTTP_USER_AGENT}='Mozilla/5.0 (Windows NT 6.1; rv:7.0.1) Gecko/20100101 Firefox/7.0.1';
+$def = browscap( );
+is( $def->{browser}, 'Firefox', "Firefox 7 fallback to 5" );
+is( $def->{FALLBACK}, 'browser' );
+
+$ENV{HTTP_USER_AGENT}='Mozilla/5.0 (Windows NT 16.1; rv:7.0.1) Gecko/20100101 Firefox/5.0.1';
+$def = browscap( );
+is( $def->{platform}, 'Win7', "Windows 16(!) fallback to Win7" );
+is( $def->{FALLBACK}, 'OS' );
+
+$ENV{HTTP_USER_AGENT}='Mozilla/5.0 (Windows NT 16.1; rv:7.0.1) Gecko/20100101 Firefox/7.0.1';
+$def = browscap( );
+is( $def->{FALLBACK}, 'browser+OS', "Firefox 7 on Win 16 fallback to 5 on Win7" );
+
 
 unlink "browscap.ini.cache";
 

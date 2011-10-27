@@ -6,17 +6,19 @@ use strict;
 use IO::File;
 use DB_File;
 use Storable;
-use Carp qw(carp);
+use Carp;
 use MLDBM qw(DB_File Storable);
-use vars qw($VERSION $BROWSCAP_INI @EXPORT @ISA);
+use vars qw($VERSION $BROWSCAP_INI $FALLBACK @EXPORT @ISA);
+use Scalar::Util qw( looks_like_number );
 
 require Exporter;
 
 @ISA = qw( Exporter );
 @EXPORT = qw(browscap);
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 $BROWSCAP_INI = qq();
+$FALLBACK = 1;
 
 ##########################################################
 sub browscap
@@ -27,7 +29,7 @@ sub browscap
         die __PACKAGE__, " wasn't installed properly.  BROWSCAP_INI isn't set.";
     }
 
-    my $bc = __PACKAGE__->new( $BROWSCAP_INI );
+    my $bc = __PACKAGE__->new( $BROWSCAP_INI, $FALLBACK );
     return $bc->match( $ua );
 
 }
@@ -36,8 +38,9 @@ sub browscap
 ##########################################################
 sub new
 {
-    my( $package, $file ) = @_;
-    my $self = bless { }, $package;
+    my( $package, $file, $fallback ) = @_;
+    $fallback = 1 unless defined $fallback;
+    my $self = bless { fallback=>$fallback }, $package;
     if( $file ) {
         $self->__set_file( $file );
     }
@@ -87,78 +90,136 @@ sub __parse
 {
     my( $self ) = @_;
 
+    local $.;
     my $fh = IO::File->new;
     $fh->open( $self->{file} ) or die "Unable to open $self->{file}: $!";
     
-    my($def, $ua, $wild, $w_details, @ALL_WILD, $key, $value);
+    my($def, $ua);
     while( <$fh> ) {
         chomp;
         tr/\cM//d;
         if( /^\[(.+)\]$/ ) {            # UA definition
             $ua = $1;
+            $self->__latest_keep( $def ) if $def;
+
             $def = { UA => $ua, 
                      LINE=>$. 
                    };
 
-            
-            $self->{data}{ $ua } = $self->__fix_def( $def );
-                                        # Does UA have wildcards in it?
-            ($wild, $w_details)  = $self->__parse_wild( $ua );
-            if( $wild ) {               # yes, then save those
-                push @ALL_WILD, $wild;
-                $self->{data}{$wild} = $w_details;
-            }
+            $self->__parse_add( $ua, $def );
             next;
         }
 
         next unless $def;
 
-        s/^\s+//; s/\s+$//;
+        s/^\s+//;   # ltrim
+        s/\s+$//;   # rtrim
         if( /^(.+?)\s*=\s*(.+)$/ ) {          # key=value
-            $key = lc $1;
-            $key =~ s/^\s+//;
-            $key =~ s/\s+$//;
-            $value = $2;
-            $def->{$key} = $value;
-            $value = $1 if /^".+"$/;   # the special PHP version has quoted values
-            $value =~ s/^\s+//;
-            $value =~ s/\s+$//;
-            if( $value eq 'False' ) {   # make true/false more perl-like
-                $def->{$key} = '';
-            }
-            elsif( $value eq 'True' ) {
-                $def->{$key} = 1;
-            }
+            $self->__parse_kv( $def, $1, $2 );
         }
     }    
     $fh->close;
 
-    # Keep this for iterative matching later
-    $self->{data}{ALL_WILD} = \@ALL_WILD;
+    $self->__fix_defs;
+    $self->__latest_wild();
+    $self->__parse_parents;
+    return keys %{ $self->{data} };
+}
 
-    # Go through all the possibilities, adding info that is defined by 
-    # the parent;
-    my $parent;
-    while( ( $ua, $def ) = each %{ $self->{data} } ) {
+##########################################################
+sub __parse_add
+{
+    my( $self, $ua, $def ) = @_;
+    confess "Why nothing to add" unless $ua;
+    $self->{data}{ $ua } = $def;
+                                        # Does UA have wildcards in it?
+    my($wild, $w_details)  = $self->__parse_wild( $ua );
+    if( $wild ) {               # yes, then save those
+        # Keep this for iterative matching later
+        push @{ $self->{data}{ALL_WILD} }, $wild;
+        $self->{data}{$wild} = $w_details;
+    }
+}
+
+##########################################################
+# Gary is perpetually changing his schema.
+#  Css => CssVersion
+#  SupportCss disapeared
+#  Aol => AolVersion
+sub __fix_defs
+{
+    my( $self ) = @_;
+    while( my( $ua, $def ) = each %{ $self->{data} } ) {
+        next unless 'HASH' eq ref $def;         # aka ALL_WILD
+        $self->__fix_def( $def );
+    }
+}
+
+sub __fix_def
+{
+    my( $self, $def ) = @_;
+    $def->{css} = $def->{cssversion} if exists $def->{cssversion} and not defined $def->{css};
+    $def->{supportcss} = 0!=$def->{cssversion} 
+                    if exists $def->{cssversion} and not defined $def->{supportcss};
+    $def->{aol} = 0!=$def->{aolversion} 
+                    if exists $def->{aolversion} and not defined $def->{aol};
+    return $def;
+}
+
+
+
+##########################################################
+sub __parse_kv
+{
+    my( $self, $def, $key, $value ) = @_;
+    $key = lc $key;
+    $key =~ s/^\s+//;
+    $key =~ s/\s+$//;
+
+    $value = $1 if /^".+"$/;   # the special PHP version has quoted values
+    $value =~ s/^\s+//;
+    $value =~ s/\s+$//;
+    $def->{$key} = $value;
+    if( $value eq 'False' ) {   # make true/false more perl-like
+        $def->{$key} = '';
+    }
+    elsif( $value eq 'True' ) {
+        $def->{$key} = 1;
+    }
+}
+
+##########################################################
+# Go through all the possibilities, adding info that is defined by 
+# the parent;
+sub __parse_parents
+{
+    my( $self ) = @_;
+    while( my( $ua, $def ) = each %{ $self->{data} } ) {
         next unless 'HASH' eq ref $def;         # aka ALL_WILD
         next unless $def->{parent};
 
-        $parent = $self->{data}{ $def->{parent} };
-        unless( $parent and ref $parent ) {
-            warn "Can't find '$def->{parent}' of parent of '$def->{UA}' at line $def->{LINE} of $self->{file}\n";
-            next;
-        }
-
-        while( ($key, $value) = each %$parent ) {
-            if( $key eq 'parent' ) {
-                # warn "Grand-Parent of $def->{UA} / $def->{parent} / $value at line $def->{LINE} of $self->{file}\n";
-            }
-            next if exists $def->{$key};
-            $def->{$key} = $value;
-        }
+        $self->__parse_parent( $def );
     }
+}
 
-    return keys %{ $self->{data} };
+##########################################################
+sub __parse_parent
+{
+    my( $self, $def ) = @_;
+
+    my $parent = $self->{data}{ $def->{parent} };
+    unless( $parent and ref $parent ) {
+        warn "Can't find '$def->{parent}' of parent of '$def->{UA}' at line $def->{LINE} of $self->{file}\n";
+        return;
+    }
+    # Make sure all grand-parent keys get into parent first
+    $self->__parse_parent( $parent ) if $parent->{parent};
+
+
+    while( my($key, $value) = each %$parent ) {
+        next if exists $def->{$key};
+        $def->{$key} = $value;
+    }
 }
 
 ##########################################################
@@ -182,20 +243,93 @@ sub __parse_wild
 }
 
 ##########################################################
-# Gary is perpetually changing is schema.
-#  Css => CssVersion
-#  SupportCss disapeared
-#  Aol => AolVersion
-sub __fix_def
+# Save the parent definition of all the latest browsers
+# This way, any future versions can fall back to these versions
+sub __latest_keep
 {
     my( $self, $def ) = @_;
-    $def->{css} = $def->{cssversion} if exists $def->{cssversion} and not defined $def->{css};
-    $def->{supportcss} = 0!=$def->{cssversion} 
-                    if exists $def->{cssversion} and not defined $def->{supportcss};
-    $def->{aol} = 0!=$def->{aolversion} 
-                    if exists $def->{aolversion} and not defined $def->{aol};
-    return $def;
+    return unless $def->{parent};
+    return unless $self->{fallback};
+
+    if( $def->{parent} eq 'DefaultProperties' ) {
+        $self->{latest}{ $def->{UA} }{UA} = $def->{UA};
+        $self->{latest}{ $def->{UA} }{children} ||= [];
+    }
+    else {
+        push @{ $self->{latest}{ $def->{parent} }{children} }, $def->{UA};
+    }
 }
+
+##########################################################
+# Create wildcards UA strings that will catch future version
+sub __latest_wild
+{
+    my( $self ) = @_;
+    foreach my $M ( values %{ $self->{latest} } ) {
+        next unless $M->{UA};
+        foreach my $parent ( sort @{ $M->{children} } ) {
+            next unless $parent;
+            my @other = ( $self->__latest_browser( $M, $parent ), 
+                          $self->__latest_OS( $M, $parent )
+                        );
+            push @other, $self->__latest_OS( $M, $other[0]{ua}, 1 ) if $other[0];
+            foreach my $O ( @other ) {
+                next unless $O;
+                next if $O->{ua} eq $parent;
+                $self->__parse_add( $O->{ua}, 
+                                       { UA=>$O->{ua}, 
+                                         parent=>$parent,
+                                         LINE=>-1,
+                                         FALLBACK=>$O->{why}
+                                       } );
+            }
+        }
+    }
+    delete $self->{latest};
+}
+
+sub __latest_browser
+{
+    my( $self, $M, $ua ) = @_;
+    # Here we convert the most recent version's string into something
+    # That will cover future versions as well.  
+    # Note that because we match longer strings (less wildcard matching) 
+    # before shorter (see match()) we can get away with it
+    if( $M->{UA} =~ /Firefox/ ) {
+        $ua =~ s((Firefox/)[\d.]+\*)($1*);
+        $ua =~ s((rv/)[\d.]+\*)($1*);
+    }
+    elsif( $M->{UA} =~ /IE/ ) {
+        $ua =~ s((MSIE )[\d.]+)($1*);
+        $ua =~ s((Trident/)[\d.]+\*)($1*);
+    }
+    elsif( $M->{UA} =~ /Opera/ ) {
+        $ua =~ s((Opera/)[\d.]+\*)($1*);
+    }
+    elsif( $M->{UA} =~ /Safari Generic/ ) {
+        $ua =~ s((Safari/)[\d.]+\*)($1*);
+    }
+    # Far to many variants on Chrome for me to be bothered
+    else {
+        return;
+    }
+    $ua =~ s/\*\*/*/g;
+    return {ua=>$ua, why=>'browser'};
+}
+
+sub __latest_OS
+{
+    my( $self, $M, $ua, $both ) = @_;
+    if( $ua =~ /Windows NT/ ) { 
+        $ua =~ s((Windows NT )[.\d]+)($1*);
+    }
+    else {
+        return;
+    }
+    $ua =~ s/\*\*/*/g;
+    return { ua=>$ua, why=>($both ? 'browser+OS' : 'OS') };
+}
+
 
 ##########################################################
 sub __save_cache
@@ -293,10 +427,10 @@ sub match
         $possible = $m_details;                 # Yes!  save this one
         $possible->{rel} = $rel;
     }
-    return unless $possible;
-    return $self->{data}{ $possible->{UA} };
-}
 
+    return $self->{data}{ $possible->{UA} } if $possible;
+    return $self->{data}{ '*' };    # Default browser
+}
 
 1;
 __END__
@@ -532,6 +666,11 @@ Full text of the User-Agent string used to match this definition.
 Line in browscap.ini where the browser's capabilites are defined.  Useful
 for debuging.
 
+=item FALLBACK
+
+If fallback was needed to match a UA string, this contains what was modified
+to make the match. Can be one of C<browser>, C<OS> or C<browser+OS>.
+
 =back
 
 The browscap.ini I<standard> also defines C<parent>, which is a link to
@@ -589,10 +728,17 @@ There is also an object oriented interface to this module.
 =head2 new
 
     my $BC = HTTP::Browscap->new;
-    my $BC = HTTP::Browscap->new( $ini_file );
+    my $BC = HTTP::Browscap->new( $ini_file, $fallback );
 
 Creates a new browscap object.  If you do not specify C<$ini_file>, the
 system's browscap.ini will be used.
+
+If C<$fallback> is true, an attempt is made to make unknown versions of
+Windows, Firefox, IE and Opera match the most recent known versions. 
+That is C<IE 24.8> (if/when it is released) should match C<IE 9.0> (currenty
+most recent as of this writing).
+
+Default is true.
 
 =head2 match
 
@@ -665,7 +811,6 @@ code if you want to modify it.
 
 Converts a UA string from browscap.ini to a Perl patern.  The UA strings
 in browscap.ini may contain C<*> or C<.>, which act like file-globs.
-
 
 
 =head1 SEE ALSO

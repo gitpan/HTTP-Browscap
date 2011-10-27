@@ -3,8 +3,9 @@ Changes
 Makefile.PL
 MANIFEST
 README
+t/00_coverage.t
 t/10_OO.t
 t/20_func.t
 t/browscap.ini
 browscap-update
-META.yml                                 Module meta-data (added by MakeMaker)
+t/01_pod.t
